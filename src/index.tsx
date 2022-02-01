@@ -8,6 +8,8 @@ import '@contentful/forma-36-react-components/dist/styles.css';
 import '@contentful/forma-36-tokens/dist/css/index.css';
 import './index.css';
 
+const locale = 'en-US';
+
 type Orientation = 'portrait' | 'landscape' | 'square';
 
 type FrameColor = 'white' | 'black' | 'gold' | 'wood' | 'no_frame';
@@ -57,9 +59,78 @@ interface PosterSettingsItem {
 
 type PostersSettings = PosterSettingsItem[];
 
+interface Entry {
+  sys: {
+    id: string;
+    linkType: string;
+    type: string;
+  };
+}
+
+interface LocalizedField {
+  [key: string]: string;
+}
+
+interface PosterEntry {
+  sys: {
+    id: string;
+  };
+  fields: {
+    title: LocalizedField;
+    previewSmall: {
+      [key: string]: Entry;
+    };
+  };
+}
+
+interface AssetEntry {
+  sys: {
+    id: string;
+  };
+  fields: {
+    file: {
+      [key: string]: { url: string };
+    };
+  };
+}
+
 interface Poster {
   id: string;
+  title: string;
+  previewSmall: string;
 }
+
+interface BuildPosterProps {
+  id: string;
+  title: string;
+  previewSmall: string;
+}
+
+const buildPoster = ({ id, title, previewSmall }: BuildPosterProps): Poster => {
+  const poster = { id, title, previewSmall };
+
+  return poster;
+};
+
+const buildPosters = async (sdk: FieldExtensionSDK, data: PosterEntry[]): Promise<Poster[]> => {
+  const iter = async (accumulator: Poster[], list: PosterEntry[]): Promise<Poster[]> => {
+    if (list.length === 0) return accumulator;
+
+    const entry = list[0];
+    const title = entry.fields.title[locale];
+    const assetId = entry.fields.previewSmall[locale].sys.id;
+    const assetEntry = ((await sdk.space.getAsset(assetId)) as unknown) as AssetEntry;
+    const file = assetEntry.fields.file[locale].url;
+
+    const poster = buildPoster({ id: entry.sys.id, title, previewSmall: file });
+
+    return iter([...accumulator, poster], list.slice(1));
+  };
+
+  const result = await iter([], data);
+
+  return result;
+};
 
 interface UsePostersResult {
   isIdle: boolean;
@@ -76,14 +147,6 @@ enum FetchingState {
   Error = 'ERROR'
 }
 
-interface PosterEntry {
-  sys: {
-    id: string;
-    linkType: string;
-    type: string;
-  };
-}
-
 const usePosters = (sdk: FieldExtensionSDK): UsePostersResult => {
   console.log('usePosters RENDER!!!');
 
@@ -91,28 +154,19 @@ const usePosters = (sdk: FieldExtensionSDK): UsePostersResult => {
   const [data, setData] = useState<Poster[]>([]);
 
   const postersField = sdk.entry.fields.posters;
-  const postersEntries: PosterEntry[] = postersField.getValue();
-  const includedIds = postersEntries.map(entry => entry.sys.id).join(',');
-
-  const query = useMemo(
-    () => ({
-      content_type: 'poster',
-      'sys.id[in]': includedIds
-    }),
-    [includedIds]
-  );
+  const postersEntries: Entry[] = postersField.getValue();
 
   const requests = useMemo(() => postersEntries.map(entry => sdk.space.getEntry(entry.sys.id)), [
-    sdk
+    sdk,
+    postersEntries
   ]);
 
   const fetchPosters = useCallback(async () => {
     setFetchingState(FetchingState.Loading);
 
     try {
-      // const posters = await sdk.space.getEntries<Poster>(query);
-
-      const posters = ((await Promise.all(requests)) as unknown) as Poster[];
+      const data = ((await Promise.all(requests)) as unknown) as PosterEntry[];
+      const posters = await buildPosters(sdk, data);
 
       setData(posters);
 
@@ -120,7 +174,7 @@ const usePosters = (sdk: FieldExtensionSDK): UsePostersResult => {
     } catch (error) {
       setFetchingState(FetchingState.Error);
     }
-  }, [query, sdk]);
+  }, [requests, sdk]);
 
   useEffect(() => {
     fetchPosters();
