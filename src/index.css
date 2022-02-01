@@ -1,0 +1,21 @@
+html,
+body,
+div {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 100%;
+  font: inherit;
+  vertical-align: baseline;
+}
+
+.App__content {
+  margin-bottom: var(--spacing-xl);
+  padding-top: var(--spacing-m);
+}
+
+.App__remove {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+}

@@ -1,0 +1,8 @@
+{
+  "id": "gallery-posters-extension",
+  "name": "gallery-posters-extension",
+  "srcdoc": "./build/index.html",
+  "fieldTypes": [
+    "Object"
+  ]
+}
