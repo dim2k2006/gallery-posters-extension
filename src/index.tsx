@@ -10,7 +10,7 @@ import {
   FieldGroup,
   RadioButtonField
 } from '@contentful/forma-36-react-components';
-import { init, FieldExtensionSDK } from 'contentful-ui-extensions-sdk';
+import { init, FieldExtensionSDK, EntryFieldAPI } from 'contentful-ui-extensions-sdk';
 import '@contentful/forma-36-react-components/dist/styles.css';
 import '@contentful/forma-36-tokens/dist/css/index.css';
 import './index.css';
@@ -38,11 +38,14 @@ interface AppProps {
 }
 
 interface PosterSettingsItem {
-  size: Size;
-  frame: FrameColor;
+  posterId: string;
+  size?: Size;
+  frame?: FrameColor;
 }
 
-type PostersSettings = PosterSettingsItem[];
+interface PostersSettings {
+  [key: string]: PosterSettingsItem | undefined;
+}
 
 interface Entry {
   sys: {
@@ -147,10 +150,9 @@ enum FetchingState {
 const usePosters = (sdk: FieldExtensionSDK): UsePostersResult => {
   const [fetchingState, setFetchingState] = useState<FetchingState>(FetchingState.Idle);
   const [data, setData] = useState<Poster[]>([]);
+  const [postersField, setPostersField] = useState<EntryFieldAPI | undefined>(undefined);
 
-  const postersField = sdk.entry.fields.posters;
-  const postersEntries: Entry[] = postersField.getValue();
-
+  const postersEntries: Entry[] = postersField ? postersField.getValue() : [];
   const requests = useMemo(() => postersEntries.map(entry => sdk.space.getEntry(entry.sys.id)), [
     sdk,
     postersEntries
@@ -172,6 +174,12 @@ const usePosters = (sdk: FieldExtensionSDK): UsePostersResult => {
   }, [requests, sdk]);
 
   useEffect(() => {
+    const field = sdk.entry.fields.posters;
+
+    setPostersField(field);
+  }, [sdk.entry.fields.posters]);
+
+  useEffect(() => {
     fetchPosters();
   }, [fetchPosters]);
 
@@ -191,44 +199,59 @@ const usePosters = (sdk: FieldExtensionSDK): UsePostersResult => {
   return result;
 };
 
+const useAutoResizer = (sdk: FieldExtensionSDK): void => {
+  useEffect(() => {
+    sdk.window.startAutoResizer();
+
+    return () => sdk.window.stopAutoResizer();
+  }, [sdk.window]);
+};
+
 const App: React.FC<AppProps> = ({ sdk }) => {
   const sdkValue = sdk.field.getValue();
-  const initialValue = sdkValue ? sdkValue : [];
+  const initialValue = sdkValue ? sdkValue : {};
   const postersFetchingState = usePosters(sdk);
 
   console.log('postersFetchingState:', postersFetchingState.data);
 
   const posters = postersFetchingState.data;
 
-  const [value, setValue] = useState<PostersSettings>(initialValue);
+  const [postersSettings, setPostersSettings] = useState<PostersSettings>(initialValue);
 
-  // const onSave = useCallback(
-  //   (newValue: Value) => {
-  //     sdk.field.setValue(newValue);
-  //
-  //     setValue(newValue);
-  //   },
-  //   [sdk.field]
-  // );
+  const onSave = useCallback(
+    (newValue: PostersSettings) => {
+      sdk.field.setValue(newValue);
 
-  // const onChange = (val: string) => {
-  //   const size = parseSize(val);
-  //   const width = toNumber(size[0]);
-  //   const height = toNumber(size[1]);
-  //   const newSize = { width, height };
-  //
-  //   const newValue = { size: newSize, orientation: value.orientation };
-  //
-  //   onSave(newValue);
-  // };
+      setPostersSettings(newValue);
+    },
+    [sdk.field]
+  );
 
-  // const currentValue = `${value.size.width}x${value.size.height}`;
+  const onChangeSize = useCallback(
+    (posterId: string, size: Size) => {
+      const currentData = postersSettings[posterId] ?? { posterId };
 
-  useEffect(() => {
-    sdk.window.startAutoResizer();
+      const newValue = { ...postersSettings, [posterId]: { ...currentData, size } };
 
-    return () => sdk.window.stopAutoResizer();
-  }, [sdk.window]);
+      onSave(newValue);
+    },
+    [postersSettings, onSave]
+  );
+
+  const onChangeFrame = useCallback(
+    (posterId: string, frame: FrameColor) => {
+      const currentData = postersSettings[posterId] ?? { posterId };
+
+      const newValue = { ...postersSettings, [posterId]: { ...currentData, frame } };
+
+      onSave(newValue);
+    },
+    [postersSettings, onSave]
+  );
+
+  // эффект который будет зависеть от posters
+
+  useAutoResizer(sdk);
 
   // useEffect(() => {
   //   const orientationField = sdk.entry.fields.orientation;
@@ -279,6 +302,10 @@ const App: React.FC<AppProps> = ({ sdk }) => {
                         <FieldGroup row>
                           {poster.sizes.map(size => {
                             const value = stringifySize(size.width, size.height);
+                            const posterSettings = postersSettings[poster.id];
+                            const isChecked =
+                              posterSettings?.size?.width === size.width &&
+                              posterSettings?.size.height === size.height;
 
                             return (
                               <RadioButtonField
@@ -286,9 +313,10 @@ const App: React.FC<AppProps> = ({ sdk }) => {
                                 labelText={value}
                                 labelIsLight
                                 name={value}
-                                checked={false}
+                                checked={isChecked}
                                 value={value}
                                 id={value}
+                                onChange={() => onChangeSize(poster.id, size)}
                               />
                             );
                           })}
@@ -297,17 +325,23 @@ const App: React.FC<AppProps> = ({ sdk }) => {
 
                       <div className="App__control">
                         <FieldGroup row>
-                          {frames.map(frame => (
-                            <RadioButtonField
-                              key={frame}
-                              labelText={frame}
-                              labelIsLight
-                              name={frame}
-                              checked={false}
-                              value={frame}
-                              id={frame}
-                            />
-                          ))}
+                          {frames.map(frame => {
+                            const posterSettings = postersSettings[poster.id];
+                            const isChecked = posterSettings?.frame === frame;
+
+                            return (
+                              <RadioButtonField
+                                key={frame}
+                                labelText={frame}
+                                labelIsLight
+                                name={frame}
+                                checked={isChecked}
+                                value={frame}
+                                id={frame}
+                                onChange={() => onChangeFrame(poster.id, frame)}
+                              />
+                            );
+                          })}
                         </FieldGroup>
                       </div>
                     </Flex>
