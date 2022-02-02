@@ -168,8 +168,6 @@ enum FetchingState {
 }
 
 const usePosters = (sdk: FieldExtensionSDK): UsePostersResult => {
-  console.log('usePosters RENDER!!!');
-
   const [fetchingState, setFetchingState] = useState<FetchingState>(FetchingState.Idle);
   const [data, setData] = useState<Poster[]>([]);
 
