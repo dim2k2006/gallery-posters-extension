@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import ReactDOM from 'react-dom';
-import toNumber from 'lodash/toNumber';
-import get from 'lodash/get';
 import {
   Flex,
   SkeletonContainer,
@@ -28,10 +26,7 @@ interface Size {
   height: number;
 }
 
-const getInitialSize = (): Size => ({ width: 50, height: 70 });
-
 const stringifySize = (width: number, height: number): string => `${width}x${height}`;
-const parseSize = (size: string) => size.split('x');
 
 interface AppProps {
   sdk: FieldExtensionSDK;
@@ -249,27 +244,26 @@ const App: React.FC<AppProps> = ({ sdk }) => {
     [postersSettings, onSave]
   );
 
-  // эффект который будет зависеть от posters
-
-  useAutoResizer(sdk);
-
+  // вызывает ререндер, пофиксить!!!
   // useEffect(() => {
-  //   const orientationField = sdk.entry.fields.orientation;
+  //   const existingPostersIds = posters.map(poster => poster.id);
+  //   const newPostersSettings = Object.keys(postersSettings).reduce<PostersSettings>(
+  //     (accumulator, posterId) => {
+  //       if (!existingPostersIds.includes(posterId)) return accumulator;
   //
-  //   const detachValueChangeHandler = orientationField.onValueChanged(
-  //     (orientation: Orientation = defaultOrientation) => {
-  //       if (value.orientation === orientation) return; // prevent initial change
+  //       const currentData = postersSettings[posterId];
   //
-  //       const size = getInitialSize();
+  //       const newAccumulator = { ...accumulator, [posterId]: currentData };
   //
-  //       const newValue = { size, orientation };
-  //
-  //       onSave(newValue);
-  //     }
+  //       return newAccumulator;
+  //     },
+  //     {}
   //   );
   //
-  //   return () => detachValueChangeHandler();
-  // }, [onSave, sdk.entry.fields.orientation, value.orientation]);
+  //   onSave(newPostersSettings);
+  // }, [posters, postersSettings, onSave]);
+
+  useAutoResizer(sdk);
 
   return (
     <div className="App">
