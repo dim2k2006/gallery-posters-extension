@@ -9,13 +9,35 @@ div {
   vertical-align: baseline;
 }
 
+.App__panel {
+  margin-bottom: var(--spacing-xl);
+}
+
+.App__title {
+  width: 100%;
+  margin-bottom: var(--spacing-s);
+}
+
+.App__preview {
+  width: 100px;
+  height: 100px;
+  margin-right: var(--spacing-m);
+  background-repeat: no-repeat;
+  background-position: 50% 50%;
+  background-size: cover;
+}
+
+.App__label {
+  margin-bottom: var(--spacing-2xs);
+}
+
 .App__content {
   margin-bottom: var(--spacing-xl);
   padding-top: var(--spacing-m);
 }
 
-.App__remove {
-  position: absolute;
-  right: 0;
-  bottom: 0;
+.App__control {
+  width: 200px;
+  margin-right: var(--spacing-m);
+  margin-bottom: var(--spacing-m);
 }

@@ -2,7 +2,14 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import toNumber from 'lodash/toNumber';
 import get from 'lodash/get';
-import { RadioButtonField, FieldGroup } from '@contentful/forma-36-react-components';
+import {
+  Flex,
+  SkeletonContainer,
+  SkeletonBodyText,
+  SectionHeading,
+  Select,
+  Option
+} from '@contentful/forma-36-react-components';
 import { init, FieldExtensionSDK } from 'contentful-ui-extensions-sdk';
 import '@contentful/forma-36-react-components/dist/styles.css';
 import '@contentful/forma-36-tokens/dist/css/index.css';
@@ -13,6 +20,8 @@ const locale = 'en-US';
 type Orientation = 'portrait' | 'landscape' | 'square';
 
 type FrameColor = 'white' | 'black' | 'gold' | 'wood' | 'no_frame';
+
+const frames: FrameColor[] = ['white', 'black', 'gold', 'wood', 'no_frame'];
 
 interface Size {
   width: number;
@@ -44,9 +53,8 @@ const sizes: SizeItem[] = [
 
 const getInitialSize = (): Size => ({ width: 50, height: 70 });
 
+const stringifySize = (width: number, height: number): string => `${width}x${height}`;
 const parseSize = (size: string) => size.split('x');
-
-const defaultOrientation: Orientation = 'portrait';
 
 interface AppProps {
   sdk: FieldExtensionSDK;
@@ -203,6 +211,8 @@ const App: React.FC<AppProps> = ({ sdk }) => {
 
   console.log('postersFetchingState:', postersFetchingState.data);
 
+  const posters = postersFetchingState.data;
+
   const [value, setValue] = useState<PostersSettings>(initialValue);
 
   // const onSave = useCallback(
@@ -253,7 +263,73 @@ const App: React.FC<AppProps> = ({ sdk }) => {
 
   return (
     <div className="App">
-      <div className="App__content">Here goes something</div>
+      {postersFetchingState.isLoading && (
+        <SkeletonContainer>
+          <SkeletonBodyText numberOfLines={5} />
+        </SkeletonContainer>
+      )}
+
+      {postersFetchingState.isSuccess && (
+        <Flex flexDirection="column">
+          {posters.map(poster => {
+            const sizeControlId = `${poster.id}-size`;
+            const frameControlId = `${poster.id}-frame`;
+
+            return (
+              <Flex key={poster.id} flexDirection="column" className="App__panel">
+                <Flex flexDirection="row">
+                  <div className="App__title">
+                    <SectionHeading>{poster.title}</SectionHeading>
+                  </div>
+                </Flex>
+
+                <Flex flexDirection="row">
+                  <div
+                    className="App__preview"
+                    style={{ backgroundImage: `url("${poster.previewSmall}")` }}
+                  />
+
+                  <div className="App__controls">
+                    <Flex flexDirection="column">
+                      <div className="App__control">
+                        <Select id={sizeControlId} value="">
+                          <Option value="" disabled>
+                            Размер
+                          </Option>
+
+                          {sizes.map(size => {
+                            const value = stringifySize(size.width, size.height);
+
+                            return (
+                              <Option key={value} value={value}>
+                                {value}
+                              </Option>
+                            );
+                          })}
+                        </Select>
+                      </div>
+
+                      <div className="App__control">
+                        <Select id={frameControlId} value="">
+                          <Option value="" disabled>
+                            Рама
+                          </Option>
+
+                          {frames.map(frame => (
+                            <Option key={frame} value="frame">
+                              {frame}
+                            </Option>
+                          ))}
+                        </Select>
+                      </div>
+                    </Flex>
+                  </div>
+                </Flex>
+              </Flex>
+            );
+          })}
+        </Flex>
+      )}
     </div>
   );
 };
