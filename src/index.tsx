@@ -19,9 +19,9 @@ const locale = 'en-US';
 
 type Orientation = 'portrait' | 'landscape' | 'square';
 
-type FrameColor = 'white' | 'black' | 'gold' | 'wood' | 'no_frame';
+type FrameColor = 'white' | 'black' | 'wood' | 'no_frame';
 
-const frames: FrameColor[] = ['white', 'black', 'gold', 'wood', 'no_frame'];
+const frames: FrameColor[] = ['white', 'black', 'wood', 'no_frame'];
 
 interface Size {
   width: number;
@@ -88,6 +88,12 @@ interface PosterEntry {
     previewSmall: {
       [key: string]: Entry;
     };
+    sizes: {
+      [key: string]: {
+        sizes: Size[];
+        orientation: Orientation;
+      };
+    };
   };
 }
 
@@ -106,16 +112,20 @@ interface Poster {
   id: string;
   title: string;
   previewSmall: string;
+  orientation: Orientation;
+  sizes: Size[];
 }
 
 interface BuildPosterProps {
   id: string;
   title: string;
   previewSmall: string;
+  orientation: Orientation;
+  sizes: Size[];
 }
 
-const buildPoster = ({ id, title, previewSmall }: BuildPosterProps): Poster => {
-  const poster = { id, title, previewSmall };
+const buildPoster = ({ id, title, previewSmall, orientation, sizes }: BuildPosterProps): Poster => {
+  const poster = { id, title, previewSmall, orientation, sizes };
 
   return poster;
 };
@@ -129,8 +139,10 @@ const buildPosters = async (sdk: FieldExtensionSDK, data: PosterEntry[]): Promis
     const assetId = entry.fields.previewSmall[locale].sys.id;
     const assetEntry = ((await sdk.space.getAsset(assetId)) as unknown) as AssetEntry;
     const file = assetEntry.fields.file[locale].url;
+    const sizes = entry.fields.sizes[locale].sizes;
+    const orientation = entry.fields.sizes[locale].orientation;
 
-    const poster = buildPoster({ id: entry.sys.id, title, previewSmall: file });
+    const poster = buildPoster({ id: entry.sys.id, title, previewSmall: file, orientation, sizes });
 
     return iter([...accumulator, poster], list.slice(1));
   };
@@ -285,7 +297,7 @@ const App: React.FC<AppProps> = ({ sdk }) => {
 
                 <Flex flexDirection="row">
                   <div
-                    className="App__preview"
+                    className={`App__preview App__preview_orientation_${poster.orientation}`}
                     style={{ backgroundImage: `url("${poster.previewSmall}")` }}
                   />
 
@@ -297,7 +309,7 @@ const App: React.FC<AppProps> = ({ sdk }) => {
                             Размер
                           </Option>
 
-                          {sizes.map(size => {
+                          {poster.sizes.map(size => {
                             const value = stringifySize(size.width, size.height);
 
                             return (
