@@ -7,8 +7,8 @@ import {
   SkeletonContainer,
   SkeletonBodyText,
   SectionHeading,
-  Select,
-  Option
+  FieldGroup,
+  RadioButtonField
 } from '@contentful/forma-36-react-components';
 import { init, FieldExtensionSDK } from 'contentful-ui-extensions-sdk';
 import '@contentful/forma-36-react-components/dist/styles.css';
@@ -259,9 +259,6 @@ const App: React.FC<AppProps> = ({ sdk }) => {
       {postersFetchingState.isSuccess && (
         <Flex flexDirection="column">
           {posters.map(poster => {
-            const sizeControlId = `${poster.id}-size`;
-            const frameControlId = `${poster.id}-frame`;
-
             return (
               <Flex key={poster.id} flexDirection="column" className="App__panel">
                 <Flex flexDirection="row">
@@ -279,35 +276,39 @@ const App: React.FC<AppProps> = ({ sdk }) => {
                   <div className="App__controls">
                     <Flex flexDirection="column">
                       <div className="App__control">
-                        <Select id={sizeControlId} value="">
-                          <Option value="" disabled>
-                            Размер
-                          </Option>
-
+                        <FieldGroup row>
                           {poster.sizes.map(size => {
                             const value = stringifySize(size.width, size.height);
 
                             return (
-                              <Option key={value} value={value}>
-                                {value}
-                              </Option>
+                              <RadioButtonField
+                                key={value}
+                                labelText={value}
+                                labelIsLight
+                                name={value}
+                                checked={false}
+                                value={value}
+                                id={value}
+                              />
                             );
                           })}
-                        </Select>
+                        </FieldGroup>
                       </div>
 
                       <div className="App__control">
-                        <Select id={frameControlId} value="">
-                          <Option value="" disabled>
-                            Рама
-                          </Option>
-
+                        <FieldGroup row>
                           {frames.map(frame => (
-                            <Option key={frame} value="frame">
-                              {frame}
-                            </Option>
+                            <RadioButtonField
+                              key={frame}
+                              labelText={frame}
+                              labelIsLight
+                              name={frame}
+                              checked={false}
+                              value={frame}
+                              id={frame}
+                            />
                           ))}
-                        </Select>
+                        </FieldGroup>
                       </div>
                     </Flex>
                   </div>
