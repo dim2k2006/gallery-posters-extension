@@ -223,6 +223,8 @@ const App: React.FC<AppProps> = ({ sdk }) => {
 
   const [postersSettings, setPostersSettings] = useState<PostersSettings>(initialValue);
 
+  console.log('postersSettings:', postersSettings);
+
   const onSave = useCallback(
     (newValue: PostersSettings) => {
       sdk.field.setValue(newValue);
@@ -324,7 +326,12 @@ const App: React.FC<AppProps> = ({ sdk }) => {
                                 checked={isChecked}
                                 value={value}
                                 id={value}
-                                onChange={() => onChangeSize(poster.id, size)}
+                                onChange={() =>
+                                  onChangeSize(poster.id, {
+                                    width: size.width,
+                                    height: size.height
+                                  })
+                                }
                               />
                             );
                           })}
