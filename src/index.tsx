@@ -152,7 +152,7 @@ const usePosters = (sdk: FieldExtensionSDK): UsePostersResult => {
     postersField
   ]);
 
-  const [postersEntries, setPostersEntries] = useState(initialPostersEntries);
+  const [postersEntries, setPostersEntries] = useState<Entry[]>(initialPostersEntries);
 
   const requests = useMemo(() => postersEntries.map(entry => sdk.space.getEntry(entry.sys.id)), [
     sdk,
@@ -175,7 +175,7 @@ const usePosters = (sdk: FieldExtensionSDK): UsePostersResult => {
   }, [requests, sdk]);
 
   useEffect(() => {
-    const detachValueChangeHandler = postersField.onValueChanged((entries: Entry[]) => {
+    const detachValueChangeHandler = postersField.onValueChanged((entries: Entry[] = []) => {
       if (isEqual(entries, postersEntries)) return; // prevent initial change
 
       setPostersEntries(entries);
@@ -256,28 +256,26 @@ const App: React.FC<AppProps> = ({ sdk }) => {
     [postersSettings, onSave]
   );
 
-  // useEffect(() => {
-  //   const existingPostersIds = posters.map(poster => poster.id);
-  //   const newPostersSettings = Object.keys(postersSettings).reduce<PostersSettings>(
-  //     (accumulator, posterId) => {
-  //       if (!existingPostersIds.includes(posterId)) return accumulator;
-  //
-  //       const currentData = postersSettings[posterId];
-  //
-  //       const newAccumulator = { ...accumulator, [posterId]: currentData };
-  //
-  //       return newAccumulator;
-  //     },
-  //     {}
-  //   );
-  //
-  //   console.log('postersSettings:', postersSettings);
-  //   console.log('newPostersSettings:', newPostersSettings);
-  //
-  //   if (isEqual(postersSettings, newPostersSettings)) return;
-  //
-  //   onSave(newPostersSettings);
-  // }, [posters, postersSettings, onSave]);
+  useEffect(() => {
+    const existingPostersIds = posters.map(poster => poster.id);
+
+    const newPostersSettings = Object.keys(postersSettings).reduce<PostersSettings>(
+      (accumulator, posterId) => {
+        if (!existingPostersIds.includes(posterId)) return accumulator;
+
+        const currentData = postersSettings[posterId];
+
+        const newAccumulator = { ...accumulator, [posterId]: currentData };
+
+        return newAccumulator;
+      },
+      {}
+    );
+
+    if (isEqual(postersSettings, newPostersSettings)) return;
+
+    onSave(newPostersSettings);
+  }, [posters, postersSettings, onSave]);
 
   useAutoResizer(sdk);
 
@@ -312,6 +310,7 @@ const App: React.FC<AppProps> = ({ sdk }) => {
                         <FieldGroup row>
                           {poster.sizes.map(size => {
                             const value = stringifySize(size.width, size.height);
+                            const id = `${poster.id}-${value}`;
                             const posterSettings = postersSettings[poster.id];
                             const isChecked =
                               posterSettings?.size?.width === size.width &&
@@ -322,10 +321,10 @@ const App: React.FC<AppProps> = ({ sdk }) => {
                                 key={value}
                                 labelText={value}
                                 labelIsLight
-                                name={value}
+                                name={id}
                                 checked={isChecked}
                                 value={value}
-                                id={value}
+                                id={id}
                                 onChange={() =>
                                   onChangeSize(poster.id, {
                                     width: size.width,
@@ -341,6 +340,7 @@ const App: React.FC<AppProps> = ({ sdk }) => {
                       <div className="App__control">
                         <FieldGroup row>
                           {frames.map(frame => {
+                            const id = `${poster.id}-${frame}`;
                             const posterSettings = postersSettings[poster.id];
                             const isChecked = posterSettings?.frame === frame;
 
@@ -349,10 +349,10 @@ const App: React.FC<AppProps> = ({ sdk }) => {
                                 key={frame}
                                 labelText={frame}
                                 labelIsLight
-                                name={frame}
+                                name={id}
                                 checked={isChecked}
                                 value={frame}
-                                id={frame}
+                                id={id}
                                 onChange={() => onChangeFrame(poster.id, frame)}
                               />
                             );
