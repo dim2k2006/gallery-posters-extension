@@ -8,7 +8,8 @@ import {
   FieldGroup,
   RadioButtonField
 } from '@contentful/forma-36-react-components';
-import { init, FieldExtensionSDK, EntryFieldAPI } from 'contentful-ui-extensions-sdk';
+import isEqual from 'lodash/isEqual';
+import { init, FieldExtensionSDK } from 'contentful-ui-extensions-sdk';
 import '@contentful/forma-36-react-components/dist/styles.css';
 import '@contentful/forma-36-tokens/dist/css/index.css';
 import './index.css';
@@ -145,9 +146,14 @@ enum FetchingState {
 const usePosters = (sdk: FieldExtensionSDK): UsePostersResult => {
   const [fetchingState, setFetchingState] = useState<FetchingState>(FetchingState.Idle);
   const [data, setData] = useState<Poster[]>([]);
-  const [postersField, setPostersField] = useState<EntryFieldAPI | undefined>(undefined);
 
-  const postersEntries: Entry[] = postersField ? postersField.getValue() : [];
+  const postersField = useMemo(() => sdk.entry.fields.posters, [sdk]);
+  const initialPostersEntries = useMemo(() => (postersField.getValue() ?? []) as Entry[], [
+    postersField
+  ]);
+
+  const [postersEntries, setPostersEntries] = useState(initialPostersEntries);
+
   const requests = useMemo(() => postersEntries.map(entry => sdk.space.getEntry(entry.sys.id)), [
     sdk,
     postersEntries
@@ -169,10 +175,14 @@ const usePosters = (sdk: FieldExtensionSDK): UsePostersResult => {
   }, [requests, sdk]);
 
   useEffect(() => {
-    const field = sdk.entry.fields.posters;
+    const detachValueChangeHandler = postersField.onValueChanged((entries: Entry[]) => {
+      if (isEqual(entries, postersEntries)) return; // prevent initial change
 
-    setPostersField(field);
-  }, [sdk.entry.fields.posters]);
+      setPostersEntries(entries);
+    });
+
+    return () => detachValueChangeHandler();
+  }, [postersField, postersEntries]);
 
   useEffect(() => {
     fetchPosters();
@@ -244,7 +254,6 @@ const App: React.FC<AppProps> = ({ sdk }) => {
     [postersSettings, onSave]
   );
 
-  // вызывает ререндер, пофиксить!!!
   // useEffect(() => {
   //   const existingPostersIds = posters.map(poster => poster.id);
   //   const newPostersSettings = Object.keys(postersSettings).reduce<PostersSettings>(
@@ -259,6 +268,11 @@ const App: React.FC<AppProps> = ({ sdk }) => {
   //     },
   //     {}
   //   );
+  //
+  //   console.log('postersSettings:', postersSettings);
+  //   console.log('newPostersSettings:', newPostersSettings);
+  //
+  //   if (isEqual(postersSettings, newPostersSettings)) return;
   //
   //   onSave(newPostersSettings);
   // }, [posters, postersSettings, onSave]);
