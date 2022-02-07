@@ -212,51 +212,32 @@ const useAutoResizer = (sdk: FieldExtensionSDK): void => {
   }, [sdk.window]);
 };
 
-const App: React.FC<AppProps> = ({ sdk }) => {
+interface UsePostersSettingsResult {
+  postersSettings: PostersSettings;
+  onChangePostersSettings: (settings: PostersSettings) => void;
+  postersFetchingState: UsePostersResult;
+}
+
+const usePostersSettings = (sdk: FieldExtensionSDK): UsePostersSettingsResult => {
   const sdkValue = sdk.field.getValue();
   const initialValue = sdkValue ? sdkValue : {};
-  const postersFetchingState = usePosters(sdk);
-
-  console.log('postersFetchingState:', postersFetchingState.data);
-
-  const posters = postersFetchingState.data;
 
   const [postersSettings, setPostersSettings] = useState<PostersSettings>(initialValue);
-
-  console.log('postersSettings:', postersSettings);
-
-  const onSave = useCallback(
-    (newValue: PostersSettings) => {
-      sdk.field.setValue(newValue);
-
-      setPostersSettings(newValue);
+  const onChangePostersSettings = useCallback(
+    (settings: PostersSettings) => {
+      sdk.field.setValue(settings);
+      setPostersSettings(settings);
     },
     [sdk.field]
   );
 
-  const onChangeSize = useCallback(
-    (posterId: string, size: Size) => {
-      const currentData = postersSettings[posterId] ?? { posterId };
+  const postersFetchingState = usePosters(sdk);
 
-      const newValue = { ...postersSettings, [posterId]: { ...currentData, size } };
-
-      onSave(newValue);
-    },
-    [postersSettings, onSave]
-  );
-
-  const onChangeFrame = useCallback(
-    (posterId: string, frame: FrameColor) => {
-      const currentData = postersSettings[posterId] ?? { posterId };
-
-      const newValue = { ...postersSettings, [posterId]: { ...currentData, frame } };
-
-      onSave(newValue);
-    },
-    [postersSettings, onSave]
-  );
+  const posters = postersFetchingState.data;
 
   useEffect(() => {
+    if (!postersFetchingState.isSuccess) return;
+
     const existingPostersIds = posters.map(poster => poster.id);
 
     const newPostersSettings = Object.keys(postersSettings).reduce<PostersSettings>(
@@ -274,8 +255,47 @@ const App: React.FC<AppProps> = ({ sdk }) => {
 
     if (isEqual(postersSettings, newPostersSettings)) return;
 
-    onSave(newPostersSettings);
-  }, [posters, postersSettings, onSave]);
+    onChangePostersSettings(newPostersSettings);
+  }, [posters, postersSettings, onChangePostersSettings, postersFetchingState]);
+
+  const result = useMemo(
+    () => ({
+      postersSettings,
+      onChangePostersSettings,
+      postersFetchingState
+    }),
+    [postersSettings, onChangePostersSettings, postersFetchingState]
+  );
+
+  return result;
+};
+
+const App: React.FC<AppProps> = ({ sdk }) => {
+  const { postersSettings, onChangePostersSettings, postersFetchingState } = usePostersSettings(
+    sdk
+  );
+
+  const onChangeSize = useCallback(
+    (posterId: string, size: Size) => {
+      const currentData = postersSettings[posterId] ?? { posterId };
+
+      const newValue = { ...postersSettings, [posterId]: { ...currentData, size } };
+
+      onChangePostersSettings(newValue);
+    },
+    [postersSettings, onChangePostersSettings]
+  );
+
+  const onChangeFrame = useCallback(
+    (posterId: string, frame: FrameColor) => {
+      const currentData = postersSettings[posterId] ?? { posterId };
+
+      const newValue = { ...postersSettings, [posterId]: { ...currentData, frame } };
+
+      onChangePostersSettings(newValue);
+    },
+    [postersSettings, onChangePostersSettings]
+  );
 
   useAutoResizer(sdk);
 
@@ -289,7 +309,7 @@ const App: React.FC<AppProps> = ({ sdk }) => {
 
       {postersFetchingState.isSuccess && (
         <Flex flexDirection="column">
-          {posters.map(poster => {
+          {postersFetchingState.data.map(poster => {
             return (
               <Flex key={poster.id} flexDirection="column" className="App__panel">
                 <Flex flexDirection="row">
