@@ -14,7 +14,7 @@ import '@contentful/forma-36-react-components/dist/styles.css';
 import '@contentful/forma-36-tokens/dist/css/index.css';
 import './index.css';
 
-const locale = 'en-US';
+const locale = 'ru-RU';
 
 type Orientation = 'portrait' | 'landscape' | 'square';
 
