@@ -61,7 +61,7 @@ interface PosterEntry {
   };
   fields: {
     title: LocalizedField;
-    previewSmall: {
+    previewSmallNew: {
       [key: string]: Entry;
     };
     sizes: {
@@ -112,7 +112,7 @@ const buildPosters = async (sdk: FieldExtensionSDK, data: PosterEntry[]): Promis
 
     const entry = list[0];
     const title = entry.fields.title[locale];
-    const assetId = entry.fields.previewSmall[locale].sys.id;
+    const assetId = entry.fields.previewSmallNew[locale].sys.id;
     const assetEntry = ((await sdk.space.getAsset(assetId)) as unknown) as AssetEntry;
     const file = assetEntry.fields.file[locale].url;
     const sizes = entry.fields.sizes[locale].sizes;
